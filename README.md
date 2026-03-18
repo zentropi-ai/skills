@@ -56,6 +56,8 @@ should follow the [CoPE policy format](./zentropi-classifier/references/policy-w
 — a structured template with defined terms, inclusion criteria,
 exclusion criteria, and examples.
 
+You may also use policies that our community has publicly shared on zentropi.ai. For example,
+try out this sexual content classifier with `labeler_version_id = 'b5c41878-e659-4b3d-be70-fd85830af4d5'`
 
 ## What is CoPE?
 
