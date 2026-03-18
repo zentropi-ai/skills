@@ -153,6 +153,9 @@ response = requests.post(
 )
 ```
 
+You may also use policies that our community has publicly shared on zentropi.ai. For example,
+try out this sexual content classifier with `labeler_version_id = 'b5c41878-e659-4b3d-be70-fd85830af4d5'`
+
 ### 3. Batch Classification
 
 No batch endpoint exists yet. Classify multiple items by calling
@@ -208,32 +211,23 @@ for r in results:
 
 ## Common Mistakes
 
-**Wrong — vague, subjective criteria:**
-```json
-{ "criteria_text": "Is this content bad or harmful?" }
-```
+**Using multiple labels in a single policy:**
 
-**Right — specific, deterministic criteria:**
+Each policy should cover a single topic. For example, do NOT create a single compound policy that tries to detect everything that is "unsafe". Instead, break it out into separate policies for each topic you want to classify.
+
+**Insufficiently specified criteria:**
 ```json
+// WRONG - vague, subjective criteria
+{ "criteria_text": "Is this content bad or harmful?" }
+
+// RIGHT - specific, deterministic criteria
 { "criteria_text": "Detect direct threats of physical violence against a named individual, including explicit statements of intent to cause bodily harm." }
 ```
 
-**Wrong — misinterpreting label values:**
+**Misinterpreting label values:**
 ```
-label: 1 means "safe"     // WRONG
-label: 1 means "detected" // CORRECT — the policy condition was found
-```
-
-**Wrong — using criteria_text in production:**
-```python
-# Inline criteria can drift across calls if you edit the string
-json={"content_text": text, "criteria_text": policy_string}
-```
-
-**Right — pinning to a labeler version:**
-```python
-# Consistent behavior, versioned, auditable
-json={"content_text": text, "labeler_version_id": "lv_abc123"}
+label: 1 means "safe" or "violating" // WRONG - depends on the policy
+label: 1 means "detected" // RIGHT — the policy condition was found
 ```
 
 For more advice on how to write a good set of policy criteria, see `references/policy-writing-guide.md`
