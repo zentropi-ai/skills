@@ -7,7 +7,7 @@ description: >
   multiple content samples. Supports single and batch classification.
 metadata:
   author: zentropi
-  version: "0.2.0"
+  version: "0.2.1"
 license: See https://zentropi.ai/legal/terms
 ---
 
@@ -79,7 +79,7 @@ Content-Type: application/json
 | `content_text` | string | Yes | The content to classify |
 | `criteria_text` | string | Yes* | Plain-English policy to evaluate against |
 | `labeler_version_id` | string | Yes* | Published labeler version to use |
-| `model` | string | No | Model to use: `cope-latest` (default, text), `cope-b-12b` (text + images) |
+| `model` | string | No | Model to use: `cope-latest` (default), `cope-a-9b` (1st gen, text), `cope-b-a4b` (2nd gen, text), or `cope-b-a4b-mm` (2nd gen, multimodal, subscriber-only) |
 
 *Provide either `criteria_text` (ad-hoc) or `labeler_version_id`. Not both.
 
