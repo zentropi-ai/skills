@@ -61,19 +61,18 @@ try out this sexual content classifier with `labeler_version_id = 'b5c41878-e659
 
 ## What is CoPE?
 
-[CoPE](https://huggingface.co/zentropi-ai/cope-a-9b) (Content Policy Evaluator) is Zentropi's classification model.
+[CoPE](https://huggingface.co/zentropi-ai/cope-b-a4b) (Content Policy Evaluator) is Zentropi's classification model.
 You write policies in plain English describing what to detect, and CoPE
 returns a binary label (match / no match) with a confidence score. No
 training data, no fine-tuning — just describe what you're looking for.
 
-- **Text and images** — use `cope-a-9b` for text; `cope-b-12b` for
+- **Text and visual content** — use `cope-b-a4b` for text; `cope-b-a4b-mm` for
   multimodal (subscriber only)
-- **Token context** — 8k tokens for `cope-a-9b`, 128k tokens for
-  `cope-b-12b` (combined policy + content)
+- **Token context** — 256k tokens (combined policy + content)
 - **Sub-second inference** — typical response times under 1s; higher
   rate limits for subscribers
 
-Learn more: [CoPE model card](https://huggingface.co/zentropi-ai/cope-a-9b)
+Learn more: [CoPE model card](https://huggingface.co/zentropi-ai/cope-b-a4b)
 
 ## Resources
 
