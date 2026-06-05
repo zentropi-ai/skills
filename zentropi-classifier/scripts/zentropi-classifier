@@ -3,7 +3,7 @@
 # requires-python = ">=3.8"
 # dependencies = ["httpx>=0.24"]
 # ///
-"""zentropi — command-line client for the Zentropi public API.
+"""zentropi-classifier — command-line client for the Zentropi public API.
 
 Authentication
 --------------
@@ -12,7 +12,7 @@ order:
 
     1. --api-key on the command line
     2. ZENTROPI_API_KEY environment variable
-    3. the config file written by `zentropi login` (~/.config/zentropi/config.json)
+    3. the config file written by `zentropi-classifier login` (~/.config/zentropi/config.json)
 
 Endpoints (build vs. run)
 -------------------------
@@ -114,7 +114,7 @@ def require_key(args):
     key = resolve_api_key(args)
     if not key:
         die(
-            "no API key found. Run 'zentropi login zt_...' or set ZENTROPI_API_KEY.",
+            "no API key found. Run 'zentropi-classifier login zt_...' or set ZENTROPI_API_KEY.",
             code=2,
         )
     return key
@@ -215,7 +215,7 @@ def cmd_login(args):
         # into shell history and process listings. Nudge toward safer options.
         print(
             "warning: passing the key on the command line exposes it in your "
-            "shell history. Prefer 'zentropi login' (interactive) or the "
+            "shell history. Prefer 'zentropi-classifier login' (interactive) or the "
             "ZENTROPI_API_KEY environment variable.",
             file=sys.stderr,
         )
@@ -327,7 +327,7 @@ def cmd_versions_snapshot(args):
     if not draft.strip():
         die(
             "this labeler has no draft criteria to snapshot. Set it with "
-            "'zentropi labelers update <id> --criteria \"...\"' first."
+            "'zentropi-classifier labelers update <id> --criteria \"...\"' first."
         )
     body = {"criteria_text": draft}
     if args.version_name is not None:
@@ -360,7 +360,7 @@ def cmd_deploy(args):
         if not draft.strip():
             die(
                 "this labeler has no draft criteria to deploy. Set it with "
-                "'zentropi labelers update <id> --criteria \"...\"' first, or "
+                "'zentropi-classifier labelers update <id> --criteria \"...\"' first, or "
                 "deploy an existing version with --version <id>."
             )
         target = parse_or_die(request(
@@ -854,7 +854,7 @@ def cmd_label(args):
 
 def build_parser():
     _version = __version__
-    p = argparse.ArgumentParser(prog="zentropi", description="Zentropi public API CLI")
+    p = argparse.ArgumentParser(prog="zentropi-classifier", description="Zentropi public API CLI")
     p.add_argument("--version", action="version", version=f"%(prog)s {_version}")
     p.add_argument("--json", action="store_true", help="Output raw JSON.")
     p.add_argument("--api-key", help="Override the API key for this invocation.")

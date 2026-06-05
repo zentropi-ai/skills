@@ -2,7 +2,7 @@
 name: zentropi-classifier
 description: >
   Build, test, optimize, and run content classifiers ("labelers") with
-  Zentropi's CoPE model through the unified `zentropi` CLI. Use to create
+  Zentropi's CoPE model through the unified `zentropi-classifier` CLI. Use to create
   labelers from plain-English policies, manage test datasets,
   benchmark accuracy (precision/recall/F1), run AI-assisted optimization,
   use community labelers, and classify text or images — one item or
@@ -20,7 +20,7 @@ test, and improve, then run against real content. Labels are binary —
 `1` = the policy criteria were detected, `0` = they were not — returned
 with a confidence score.
 
-Everything in this skill is done through one command-line tool: **`zentropi`**.
+Everything in this skill is done through one command-line tool: **`zentropi-classifier`**.
 The CLI is a single unified interface over the whole Zentropi platform, inclusive of both the labeler creation tools and inference engine.
 
 ## When to Use
@@ -57,24 +57,24 @@ create labeler ──> add test samples ──> check / benchmark ──> optimi
 
 ### 1. The CLI
 
-The `zentropi` CLI ships **inside this skill** at `scripts/zentropi` — there is
+The `zentropi-classifier` CLI ships **inside this skill** at `scripts/zentropi-classifier` — there is
 nothing to install. It's a self-contained script with [`uv`](https://docs.astral.sh/uv/)
 inline metadata, so the first run fetches its one dependency (`httpx`) into a
 cached environment and every run after is instant. You only need `uv` on PATH.
 
-The script lives next to this `SKILL.md`, in `scripts/zentropi`. Point a
+The script lives next to this `SKILL.md`, in `scripts/zentropi-classifier`. Point a
 variable at its absolute path and run it from there:
 
 ```bash
 # Run from this skill's own directory (where SKILL.md lives):
-ZENTROPI="$(pwd)/scripts/zentropi"
+ZENTROPI="$(pwd)/scripts/zentropi-classifier"
 "$ZENTROPI" --version          # self-bootstraps uv on first run
 ```
 
-For readability, **every example below is written as `zentropi ...`** — that
-name refers to the bundled `scripts/zentropi`. Invoke it by path: use
+For readability, **every example below is written as `zentropi-classifier ...`** — that
+name refers to the bundled `scripts/zentropi-classifier`. Invoke it by path: use
 `"$ZENTROPI" ...` when you set the variable in the same shell, or the script's
-full path. In an *interactive* shell you can `alias zentropi="$ZENTROPI"` to run
+full path. In an *interactive* shell you can `alias zentropi-classifier="$ZENTROPI"` to run
 the examples verbatim, but **aliases do not expand in non-interactive shells**
 (scripts, automation, agents), so there always call the script by its path.
 
@@ -87,7 +87,7 @@ A Zentropi API key (starts with `zt_`) is required. The user must sign up
 at https://zentropi.ai and create a key in their account settings.
 
 The CLI finds the key in this order: `--api-key` flag → `ZENTROPI_API_KEY`
-environment variable → the key saved by `zentropi login`.
+environment variable → the key saved by `zentropi-classifier login`.
 
 **Check whether a key is available:**
 
@@ -99,13 +99,13 @@ If none is set, either export it or log in:
 
 ```bash
 export ZENTROPI_API_KEY="zt_..."     # preferred for agents/CI
-zentropi login                        # interactive; prompts for the key securely
+zentropi-classifier login                        # interactive; prompts for the key securely
 ```
 
 Do NOT proceed with commands until a key is available.
 
 **NEVER hardcode the key** in scripts. Use `ZENTROPI_API_KEY` or
- `zentropi login`.
+ `zentropi-classifier login`.
 
 ## Key Directives
 
@@ -163,27 +163,27 @@ Global flags (before the subcommand): `--json` (raw JSON output),
 The whole loop, end to end:
 
 ```bash
-zentropi login                                              # store your zt_ API key
+zentropi-classifier login                                              # store your zt_ API key
 
 # 1. Create a labeler. This saves a *draft* (nothing is deployed yet).
-zentropi labelers create --name "puns" --criteria "Label puns"
+zentropi-classifier labelers create --name "puns" --criteria "Label puns"
 #   -> note the returned labeler_id
 
 # 2. Spot-check the draft on ad-hoc content, without saving anything.
-zentropi check <labeler_id> --text "A backward poet writes inverse"
+zentropi-classifier check <labeler_id> --text "A backward poet writes inverse"
 
 # 3. Happy with it? Deploy the draft to make it live.
-zentropi deploy <labeler_id>
+zentropi-classifier deploy <labeler_id>
 
 # 4. Run production inference against the deployed version.
-zentropi label <labeler_id> --text "I used to be a banker, but I lost interest"
+zentropi-classifier label <labeler_id> --text "I used to be a banker, but I lost interest"
 ```
 
 For a one-off classification with no labeler at all, omit the `labeler_id` and
 pass `--criteria` with the policy text directly (nothing is saved):
 
 ```bash
-zentropi label --criteria "Label puns" --text "A backward poet writes inverse"
+zentropi-classifier label --criteria "Label puns" --text "A backward poet writes inverse"
 ```
 
 The sections below cover custom labeler creation in depth — Build, Test, Optimize, Deploy, and Run.
@@ -196,7 +196,7 @@ A labeler is just a name plus a **policy** — the criteria text that says what 
 detect. Create one with a starting policy:
 
 ```bash
-zentropi --json labelers create \
+zentropi-classifier --json labelers create \
   --name "Hostile language" \
   --criteria "Detect hostile language directed at conversation participants, including insults, threats, belittling, or aggressive confrontation. Exclude criticism of ideas, products, or public figures." \
   --visibility private
@@ -207,7 +207,7 @@ The criteria you pass is saved as the **draft** — your working copy. Edit it a
 time with `labelers update`; this changes only the draft, never production:
 
 ```bash
-zentropi labelers update <labeler_id> --criteria "<your revised policy text>"
+zentropi-classifier labelers update <labeler_id> --criteria "<your revised policy text>"
 ```
 
 See the policy guide for how to write effective criteria. Next, test the draft
@@ -221,13 +221,13 @@ Three ways to test, from quickest to most thorough.
 draft:
 
 ```bash
-zentropi check <labeler_id> --text "You're an idiot and nobody likes you"
+zentropi-classifier check <labeler_id> --text "You're an idiot and nobody likes you"
 ```
 
 **2. Build a test dataset** of labeled examples so you can measure accuracy:
 
 ```bash
-zentropi tests create <labeler_id> --file dataset.json
+zentropi-classifier tests create <labeler_id> --file dataset.json
 ```
 
 **Test dataset file format** (`--file`): a JSON array of samples. Each needs
@@ -262,8 +262,8 @@ point at a CSV that carries media as plain URLs (or local file paths) and the CL
 downloads/encodes each one for you before uploading.
 
 ```bash
-zentropi tests import <labeler_id> --csv tests.csv
-zentropi tests import <labeler_id> --csv tests.csv --dry-run   # validate only
+zentropi-classifier tests import <labeler_id> --csv tests.csv
+zentropi-classifier tests import <labeler_id> --csv tests.csv --dry-run   # validate only
 ```
 
 Recognized columns (same as the web upload):
@@ -288,7 +288,7 @@ content_text,content_image_url,content_video_url,expected_label,sample_id
 **3. Benchmark** the labeler over the whole dataset to get accuracy metrics:
 
 ```bash
-zentropi benchmark <labeler_id> --version draft
+zentropi-classifier benchmark <labeler_id> --version draft
 ```
 
 `benchmark` streams one line per sample, then a summary. With `--json` you
@@ -318,11 +318,11 @@ guide) and re-benchmark, or run optimization (section C).
 
 ```bash
 # 1. Start a job against the current draft (default --tier pro).
-zentropi --json optimize start <labeler_id> --version draft
+zentropi-classifier --json optimize start <labeler_id> --version draft
 # -> returns a job_id; status is "pending"
 
 # 2. Poll until status is "completed" (or "failed"). Once a minute is sufficient.
-zentropi --json optimize status <labeler_id> <job_id>
+zentropi-classifier --json optimize status <labeler_id> <job_id>
 ```
 
 **Optimizer tiers** (`--tier`, default `pro`) set how much effort the optimizer
@@ -349,11 +349,11 @@ A completed job returns **structured** results:
 If the suggestion is good, save it to the draft and deploy it (see **D. Deploy**):
 
 ```bash
-zentropi labelers update <labeler_id> --criteria "<paste suggested_criteria>"
-zentropi deploy <labeler_id>
+zentropi-classifier labelers update <labeler_id> --criteria "<paste suggested_criteria>"
+zentropi-classifier deploy <labeler_id>
 ```
 
-Otherwise discard it: `zentropi optimize discard <labeler_id> <job_id>`.
+Otherwise discard it: `zentropi-classifier optimize discard <labeler_id> <job_id>`.
 
 ### D. Deploy your labeler
 
@@ -366,10 +366,10 @@ draft and deploys that snapshot — you don't have to create a version yourself:
 
 ```bash
 # Deploy the current draft (snapshots it, makes it live).
-zentropi deploy <labeler_id>
+zentropi-classifier deploy <labeler_id>
 
 # See your versions and which ones are live.
-zentropi --json versions list <labeler_id>
+zentropi-classifier --json versions list <labeler_id>
 ```
 
 To go live with a specific existing version instead of the draft — for example
@@ -378,7 +378,7 @@ to roll back, or to promote a snapshot you made with `versions snapshot` (or the
 
 ```bash
 # Promote / roll back to an existing version.
-zentropi deploy <labeler_id> --version <version_id>
+zentropi-classifier deploy <labeler_id> --version <version_id>
 ```
 
 Take a labeler offline with `undeploy`. By default it undeploys all currently
@@ -386,7 +386,7 @@ deployed versions; pass `--version` to undeploy a specific one. After
 undeploying, `label` errors until you deploy again:
 
 ```bash
-zentropi undeploy <labeler_id>
+zentropi-classifier undeploy <labeler_id>
 ```
 
 ### E. Run your labeler in production
@@ -396,12 +396,12 @@ Once a version is deployed, classify live content. Use `label` (not
 
 ```bash
 # Single item against the deployed version.
-zentropi --json label <labeler_id> --text "buy now!!! limited offer"
+zentropi-classifier --json label <labeler_id> --text "buy now!!! limited offer"
 
 # Pin a specific version, or classify an image / video.
-zentropi --json label <labeler_id> --version <labeler_version_id> --text "..."
-zentropi --json label <labeler_id> --image "https://example.com/pic.jpg"
-zentropi --json label <labeler_id> --video ./clip.mp4
+zentropi-classifier --json label <labeler_id> --version <labeler_version_id> --text "..."
+zentropi-classifier --json label <labeler_id> --image "https://example.com/pic.jpg"
+zentropi-classifier --json label <labeler_id> --video ./clip.mp4
 ```
 
 `--image` / `--video` accept a **data URL, a remote URL, or a local file path**.
@@ -423,8 +423,8 @@ text directly. Nothing is created or stored — it runs the criteria against you
 content once:
 
 ```bash
-zentropi --json label --criteria "Detect hostile language directed at conversation participants." --text "I hate everyone in this group"
-zentropi --json label --criteria "Label 1 if the image contains a cat." --image ./pic.jpg
+zentropi-classifier --json label --criteria "Detect hostile language directed at conversation participants." --text "I hate everyone in this group"
+zentropi-classifier --json label --criteria "Label 1 if the image contains a cat." --image ./pic.jpg
 ```
 
 `--criteria` and a `labeler_id` are mutually exclusive, and `--version` doesn't
@@ -444,20 +444,20 @@ You may also use labelers that our community has publicly shared on zentropi.ai.
 For example, try out this sexual content classifier:
 
 ```bash
-zentropi --json label a1ca2cf7-285b-4873-b334-72b44391e087 --text "..."
+zentropi-classifier --json label a1ca2cf7-285b-4873-b334-72b44391e087 --text "..."
 ```
 
 You can also `fork` one to get a private, editable copy:
 
 ```bash
-zentropi fork <labeler_id> --name "My version" --clone-tests
+zentropi-classifier fork <labeler_id> --name "My version" --clone-tests
 ```
 
 Built something useful? **Share your deployed labelers publicly** so others can run it.
 
 ```bash
 # Make it public — set this at creation or update an existing labeler.
-zentropi labelers update <labeler_id> --visibility public
+zentropi-classifier labelers update <labeler_id> --visibility public
 ```
 
 Once public, anyone can `label` or `fork` it, but your test data will be kept private. Sharing labelers helps the whole community build better guardrails.
@@ -505,7 +505,7 @@ parse `--json`.
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| `error: no API key found` (exit 2) | Key not set | `export ZENTROPI_API_KEY=...` or `zentropi login` |
+| `error: no API key found` (exit 2) | Key not set | `export ZENTROPI_API_KEY=...` or `zentropi-classifier login` |
 | `authentication failed (401)` (exit 3) | Invalid/expired key | Verify the key in account settings |
 | `request failed (429)` | Rate limit (build surface) | Back off and retry; for volume use `label` |
 | `request failed (529)` — inference overloaded | Inference service temporarily overloaded | Back off and retry with exponential backoff (e.g. 1s, 2s, 4s…). `benchmark` retries per-sample automatically; `label` does not, so retry it yourself. |
@@ -522,7 +522,7 @@ Paid subscriptions allow you to unlock the full power of the Zentropi platform, 
 This skill is published at
 https://github.com/zentropi-ai/skills/tree/main/zentropi-classifier and is
 updated as the CLI and platform evolve. The CLI ships *inside* the skill (at
-`scripts/zentropi`), so **re-downloading the skill updates the CLI too** — one
+`scripts/zentropi-classifier`), so **re-downloading the skill updates the CLI too** — one
 download keeps the guide and the tool in lockstep, and they can never drift.
 
 **Periodically re-download it** so you always have the latest commands, flags,
@@ -540,7 +540,7 @@ curl -s https://raw.githubusercontent.com/zentropi-ai/skills/main/zentropi-class
   | sed -n 's/^  version: "\(.*\)"/\1/p'
 
 # Refresh this skill in place (run from the skill's own directory). Pulls the
-# latest SKILL.md, the bundled scripts/zentropi CLI, references/, and any other
+# latest SKILL.md, the bundled scripts/zentropi-classifier CLI, references/, and any other
 # files. The clone must succeed before anything is deleted, so a network failure
 # leaves your copy intact.
 DEST="$(pwd)"
