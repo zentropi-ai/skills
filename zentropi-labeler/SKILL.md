@@ -9,7 +9,7 @@ description: >
   at production volume.
 metadata:
   author: zentropi
-  version: "0.10.4"
+  version: "0.10.5"
 license: See https://zentropi.ai/legal/terms
 ---
 
@@ -168,7 +168,7 @@ zentropi-labeler create --name "puns" --criteria "Label puns"
 #   -> note the returned labeler_id
 
 # 2. Spot-check the draft on ad-hoc content, without saving anything.
-zentropi-labeler check <labeler_id> --text "A backward poet writes inverse"
+zentropi-labeler check <labeler_id> --text "What do you call a fake noodle? An impasta."
 
 # 3. Happy with it? Deploy the draft to make it live.
 zentropi-labeler deploy <labeler_id>
