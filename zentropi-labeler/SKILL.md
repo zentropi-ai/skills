@@ -154,7 +154,7 @@ Global flags (before the subcommand): `--json` (raw JSON output),
 | `fork <labeler_id> [--name] [--version] [--visibility] [--clone-tests]` | Fork/remix a labeler (default `--version latest`). |
 | `star <labeler_id> [--status]` | Star/unstar a labeler, or show status with `--status`. |
 | `check <labeler_id> [--text TEXT] [--image SRC] [--video SRC] [--version draft\|latest\|<version_id>]` | Spot-check the labeler on ad-hoc content **without saving it**. `SRC` is a data URL, remote URL, or local file path (CLI encodes it). Defaults to your `draft` (or `latest` deployed if community labeler). |
-| `run [labeler_id] [--criteria TEXT] [--text TEXT] [--image SRC] [--video SRC] [--version <labeler_version_id>\|latest] [--model cope-latest]` | Classify live content. Pass a `labeler_id` (which defaults to the `latest` deployed version unless a `version_id` is specified). Alternatively, omit `labeler_id` and pass `--criteria` to label against ad-hoc policy text with no labeler. `SRC` is a data URL, remote URL, or local file path (CLI encodes it). Rate limits apply. |
+| `run [labeler_id] [--criteria TEXT] [--text TEXT] [--image SRC] [--video SRC] [--version <labeler_version_id>\|latest] [--model cope-latest]` | Classify live content. Pass a `labeler_id` (which defaults to the `latest` deployed version unless a `version_id` is specified). Alternatively, omit `labeler_id` and pass `--criteria` to label against ad-hoc policy text with no labeler. `SRC` is a data URL, remote URL, or local file path (CLI encodes it). Always returns JSON. Rate limits apply. |
 
 ## Quickstart
 
@@ -174,14 +174,14 @@ zentropi-labeler check <labeler_id> --text "A backward poet writes inverse"
 zentropi-labeler deploy <labeler_id>
 
 # 4. Run production inference against the deployed version.
-zentropi-labeler run <labeler_id> --text "I used to be a banker, but I lost interest"
+zentropi-labeler run <labeler_id> --text "I would tell you a chemistry joke but I know I wouldn't get a reaction."
 ```
 
 For a one-off classification with no labeler at all, omit the `labeler_id` and
 pass `--criteria` with the policy text directly (nothing is saved):
 
 ```bash
-zentropi-labeler run --criteria "Label puns" --text "A backward poet writes inverse"
+zentropi-labeler run --criteria "Label puns" --text "I wondered why the baseball kept getting bigger. Then it hit me."
 ```
 
 The sections below cover custom labeler creation in depth — Build, Test, Optimize, Deploy, and Run.
@@ -390,7 +390,8 @@ zentropi-labeler undeploy <labeler_id>
 ### E. Run your labeler in production
 
 Once a version is deployed, classify live content. Use `run` (not
-`check` / `benchmark`) for anything beyond one-off tests.
+`check` / `benchmark`) for anything beyond one-off tests. This function always returns JSON since it is intended for automated pipelines.
+
 
 ```bash
 # Single item against the deployed version.

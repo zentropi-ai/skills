@@ -47,7 +47,7 @@ import sys
 
 import httpx
 
-__version__ = "0.10.3"
+__version__ = "0.10.4"
 
 DEFAULT_BUILD_API_BASE = "https://zentropi.ai"
 DEFAULT_RUN_API_BASE = "https://api.zentropi.ai"
@@ -123,6 +123,20 @@ def auth_headers(key):
     return {"Authorization": f"Bearer {key}"}
 
 
+def _loads_lenient(text):
+    """Parse JSON, tolerating raw (unescaped) control characters that some
+    streaming/partial build payloads emit mid-job (e.g. intermediate optimize
+    status). ``strict=False`` allows control chars inside strings; we always
+    re-serialize via ``json.dumps`` downstream, so our own ``--json`` output
+    stays strictly valid at every poll. Returns ``_NON_JSON`` when the body is
+    not JSON at all.
+    """
+    try:
+        return json.loads(text, strict=False)
+    except Exception:
+        return _NON_JSON
+
+
 def parse_or_die(resp):
     """Return the JSON body of a response, dying on any error status.
 
@@ -130,23 +144,16 @@ def parse_or_die(resp):
     JSON so callers can decide how to handle plain-text responses.
     """
     if resp.status_code == 401:
-        try:
-            detail = resp.json().get("detail", resp.text)
-        except Exception:
-            detail = resp.text
+        body = _loads_lenient(resp.text)
+        detail = body.get("detail", resp.text) if isinstance(body, dict) else resp.text
         die(f"authentication failed (401): {detail}", code=3)
 
     if resp.status_code >= 400:
-        try:
-            detail = resp.json().get("detail", resp.text)
-        except Exception:
-            detail = resp.text
+        body = _loads_lenient(resp.text)
+        detail = body.get("detail", resp.text) if isinstance(body, dict) else resp.text
         die(f"request failed ({resp.status_code}): {detail}", code=1)
 
-    try:
-        return resp.json()
-    except Exception:
-        return _NON_JSON
+    return _loads_lenient(resp.text)
 
 
 def emit(data, as_json):
@@ -604,10 +611,8 @@ def cmd_tests_import(args):
                 f"({created} created before the failure)"
             )
         if resp.status_code >= 400:
-            try:
-                detail = resp.json().get("detail", resp.text)
-            except Exception:
-                detail = resp.text
+            body = _loads_lenient(resp.text)
+            detail = body.get("detail", resp.text) if isinstance(body, dict) else resp.text
             if resp.status_code in (401, 402, 403):
                 die(
                     f"upload stopped ({resp.status_code}): {detail} "
@@ -618,10 +623,7 @@ def cmd_tests_import(args):
                 f"upload failed at sample {start + 1} ({resp.status_code}): {detail} "
                 f"({created} created before the failure)"
             )
-        try:
-            data = resp.json()
-        except Exception:
-            data = []
+        data = _loads_lenient(resp.text)
         if isinstance(data, list):
             created += len(data)
             all_created.extend(data)
@@ -676,7 +678,7 @@ def cmd_benchmark(args):
                         continue
                     payload = line[len("data: "):]
                     try:
-                        obj = json.loads(payload)
+                        obj = json.loads(payload, strict=False)
                     except json.JSONDecodeError:
                         continue
                     results.append(obj)
