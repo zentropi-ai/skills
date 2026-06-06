@@ -396,7 +396,7 @@ Once a version is deployed, classify live content. Use `run` (not
 # Single item against the deployed version.
 zentropi-labeler --json run <labeler_id> --text "buy now!!! limited offer"
 
-# Pin a specific version, or classify an image / video.
+# Pin a specific version (it must be deployed), or classify an image / video.
 zentropi-labeler --json run <labeler_id> --version <labeler_version_id> --text "..."
 zentropi-labeler --json run <labeler_id> --image "https://example.com/pic.jpg"
 zentropi-labeler --json run <labeler_id> --video ./clip.mp4
@@ -495,9 +495,9 @@ parse `--json`.
   policy condition was *detected*. The meaning is whatever your policy says.
 - **Using build commands for production.** `check` and `benchmark` are
   rate-limited dev tools. Deploy a version and use `run` for scaled traffic.
-- **Forgetting to deploy.** `run --version latest` uses the *deployed*
-  version. `versions create` only snapshots criteria — run
-  `deploy` to make a version live and change production.
+- **Forgetting to deploy.** `run` only serves **deployed** versions — both
+  `latest` and a pinned `--version <id>` (an undeployed one returns 404).
+  `versions create` just snapshots criteria; use `deploy` to make it live.
 
 ## Troubleshooting
 
@@ -523,9 +523,9 @@ updated as the CLI and platform evolve. The CLI ships *inside* the skill (at
 `scripts/zentropi-labeler`), so **re-downloading the skill updates the CLI too** — one
 download keeps the guide and the tool in lockstep, and they can never drift.
 
-**Periodically re-download it** so you always have the latest commands, flags,
+**Re-download it periodically** so you always have the latest commands, flags,
 and guidance — a good rule of thumb is to check at the start of a Zentropi task
-if you haven't in a while (e.g. the last day or so), and any time a command
+if you haven't in a while (e.g. the last week or so), and any time a command
 behaves differently than this skill describes.
 
 Check the published `metadata.version` against your local copy, and if it's
