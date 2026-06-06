@@ -19,9 +19,9 @@ Endpoints (build vs. run)
 Zentropi splits along a build-vs-run line, and so does this CLI:
 
     * BUILD — create / test / benchmark labelers -> the /v1 API
-      (default https://zentropi.ai). Override with ZENTROPI_API_BASE.
-    * RUN   — run a labeler on live data -> the inference API
-      (default https://api.zentropi.ai). Override with ZENTROPI_INFERENCE_BASE.
+      (default https://zentropi.ai). Override with ZENTROPI_BUILD_API_BASE.
+    * RUN   — run a labeler on live data -> the run-time inference API
+      (default https://api.zentropi.ai). Override with ZENTROPI_RUN_API_BASE.
 
 `benchmark` (against a labeler's stored dataset) and `check` (a one-off spot
 check against ad-hoc content you supply) are both build/test operations, so they
@@ -47,10 +47,10 @@ import sys
 
 import httpx
 
-__version__ = "0.10.2"
+__version__ = "0.10.3"
 
-DEFAULT_API_BASE = "https://zentropi.ai"
-DEFAULT_INFERENCE_BASE = "https://api.zentropi.ai"
+DEFAULT_BUILD_API_BASE = "https://zentropi.ai"
+DEFAULT_RUN_API_BASE = "https://api.zentropi.ai"
 
 CONFIG_DIR = os.path.join(
     os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
@@ -89,12 +89,12 @@ def resolve_api_key(args):
     return load_config().get("api_key")
 
 
-def api_base():
-    return os.environ.get("ZENTROPI_API_BASE", DEFAULT_API_BASE).rstrip("/")
+def build_api_base():
+    return os.environ.get("ZENTROPI_BUILD_API_BASE", DEFAULT_BUILD_API_BASE).rstrip("/")
 
 
-def inference_base():
-    return os.environ.get("ZENTROPI_INFERENCE_BASE", DEFAULT_INFERENCE_BASE).rstrip("/")
+def run_api_base():
+    return os.environ.get("ZENTROPI_RUN_API_BASE", DEFAULT_RUN_API_BASE).rstrip("/")
 
 
 # ----------------------------------------------------------------------------
@@ -196,7 +196,7 @@ def client():
 
 
 def request(method, path, key, *, json_body=None, params=None):
-    url = f"{api_base()}{path}"
+    url = f"{build_api_base()}{path}"
     with client() as c:
         return c.request(
             method, url, headers=auth_headers(key), json=json_body, params=params
@@ -658,7 +658,7 @@ def cmd_tests_delete_all(args):
 
 def cmd_benchmark(args):
     key = require_key(args)
-    url = f"{api_base()}/v1/labelers/{args.labeler_id}/benchmark"
+    url = f"{build_api_base()}/v1/labelers/{args.labeler_id}/benchmark"
     params = {}
     if args.version is not None:
         params["version_id"] = args.version
@@ -832,7 +832,7 @@ def cmd_label(args):
             body["content_video"] = _media_to_data_url(args.video, "video")
     except ValueError as e:
         die(str(e))
-    url = f"{inference_base()}/v1/label"
+    url = f"{run_api_base()}/v1/label"
     try:
         with client() as c:
             resp = c.post(url, headers=auth_headers(key), json=body)
