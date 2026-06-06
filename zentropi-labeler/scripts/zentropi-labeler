@@ -47,7 +47,7 @@ import sys
 
 import httpx
 
-__version__ = "0.10.1"
+__version__ = "0.10.2"
 
 DEFAULT_API_BASE = "https://zentropi.ai"
 DEFAULT_INFERENCE_BASE = "https://api.zentropi.ai"

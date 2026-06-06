@@ -9,7 +9,7 @@ description: >
   at production volume.
 metadata:
   author: zentropi
-  version: "0.10.1"
+  version: "0.10.2"
 license: See https://zentropi.ai/legal/terms
 ---
 
@@ -533,7 +533,7 @@ newer, refresh the whole skill directory:
 
 ```bash
 # See the latest published version (compare to the metadata.version at the top
-# of this file — currently 0.10.1).
+# of this file — currently 0.10.2).
 curl -s https://raw.githubusercontent.com/zentropi-ai/skills/main/zentropi-labeler/SKILL.md \
   | sed -n 's/^  version: "\(.*\)"/\1/p'
 
