@@ -33,6 +33,16 @@ npx skills add https://github.com/zentropi-ai/skills
 npx skills add https://github.com/zentropi-ai/skills --skill zentropi-labeler
 ```
 
+**Claude Code plugin:**
+
+This repo is also a [Claude Code](https://code.claude.com) plugin marketplace.
+Add it once, then install the labeler plugin:
+
+```
+/plugin marketplace add zentropi-ai/skills
+/plugin install zentropi-labeler@zentropi
+```
+
 **Manual installation:**
 
 Copy the skill directory into your agent's skills folder. The agent

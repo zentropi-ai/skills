@@ -1,0 +1,22 @@
+{
+  "name": "zentropi",
+  "owner": {
+    "name": "Zentropi",
+    "url": "https://zentropi.ai"
+  },
+  "metadata": {
+    "description": "Zentropi real-time classifiers for text, images, and video.",
+    "version": "0.10.8"
+  },
+  "plugins": [
+    {
+      "name": "zentropi-labeler",
+      "source": "./",
+      "strict": false,
+      "description": "Build, test, optimize, and run content labelers for text, images, and video — straight from your agent. Give your agent the superpower of fast, accurate, custom classification that integrate directly into your apps and workflows.",
+      "skills": [
+        "./skills/zentropi-labeler"
+      ]
+    }
+  ]
+}
