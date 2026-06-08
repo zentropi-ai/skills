@@ -9,7 +9,7 @@ description: >
   at production volume.
 metadata:
   author: zentropi
-  version: "0.10.8"
+  version: "0.10.9"
 license: See https://zentropi.ai/legal/terms
 ---
 
