@@ -1,30 +1,40 @@
 # Zentropi Skills
 
 Agent skills for building systems powered by the
-[Zentropi](https://zentropi.ai) classification engine.
+[Zentropi](https://zentropi.ai) classification engine. They give AI agents the superpower of fast, accurate, flexible, content labeling.
 
 These skills follow the [Agent Skills](https://github.com/anthropics/agent-skills)
-open standard. They teach AI coding agents how to integrate Zentropi's
-CoPE model into applications — from writing classification policies to
-calling the API to building labeling pipelines.
+open standard.  They teach AI coding agents how to integrate Zentropi into applications and workflows— from writing policies to
+optimizing performance to deploying live.
 
 ## Skills
 
 | Skill | Description |
 |-------|-------------|
-| [zentropi-labeler](./zentropi-labeler/) | Create custom classifiers and label content against them using the Zentropi API. |
+| [zentropi-labeler](./skills/zentropi-labeler/) | Create custom classifiers and label content against them using the Zentropi API. |
 
 ## Quick Start
 
 ### 0. Installation
 
-Each skill directory contains a `SKILL.md` that AI agents read to learn
-the capability. To install a skill:
-
 **Automatic installation:**
+
 Just ask your agent: "Install the zentropi skills at https://github.com/zentropi-ai/skills"
 
+**Skills.sh package manager:**
+
+Another fast way to install is with [skills.sh](https://skills.sh):
+
+```bash
+# Install every skill in this repo
+npx skills add https://github.com/zentropi-ai/skills
+
+# …or install just the zentropi-labeler skill
+npx skills add https://github.com/zentropi-ai/skills --skill zentropi-labeler
+```
+
 **Manual installation:**
+
 Copy the skill directory into your agent's skills folder. The agent
 reads `SKILL.md` on demand and follows the instructions to build
 labelers, write policies, classify content, and handle errors.
@@ -52,7 +62,7 @@ Label: 1 (criteria matched), Confidence: 0.60
 ### 3. Write better policies
 
 Simple one-line criteria work for prototyping, but production policies
-should follow the [CoPE policy format](./zentropi-labeler/references/policy-writing-guide.md)
+should follow the [CoPE policy format](./skills/zentropi-labeler/references/policy-writing-guide.md)
 — a structured template with defined terms, inclusion criteria,
 exclusion criteria, and examples.
 
@@ -76,10 +86,10 @@ Learn more: [CoPE model card](https://huggingface.co/zentropi-ai/cope-b-a4b)
 
 ## Resources
 
-- [Zentropi Dashboard](https://zentropi.ai) — create labelers, manage API keys
+- [Zentropi Platform](https://zentropi.ai) — create labelers, manage API keys
 - [API Documentation](https://zentropi.ai/support)
-- [Policy Writing Guide](./zentropi-labeler/references/policy-writing-guide.md)
-- [CoPE Model Card](https://huggingface.co/zentropi-ai/cope-a-9b)
+- [Policy Writing Guide](./skills/zentropi-labeler/references/policy-writing-guide.md)
+- [CoPE-B Model Card](https://huggingface.co/zentropi-ai/cope-b-a4b)
 
 ## License
 
