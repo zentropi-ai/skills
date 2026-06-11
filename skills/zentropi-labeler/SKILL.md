@@ -9,7 +9,7 @@ description: >
   at production volume.
 metadata:
   author: zentropi
-  version: "0.10.9"
+  version: "0.11.0"
 license: See https://zentropi.ai/legal/terms
 ---
 
@@ -109,8 +109,10 @@ Do NOT proceed with commands until a key is available.
 ## Key Directives
 
 1. **Always pass `--json` when running programmatically** and parse stdout.
-   The CLI prints human-readable text by default; `--json` gives stable,
-   structured output.
+   Management commands (`list`, `get`, `create`, etc.) print a human-readable
+   summary by default and give stable, structured output with `--json`. `run`
+   (and `run --batch`) are for machines and **always emit JSON**, with or
+   without the flag.
 2. **Interpret labels correctly** — `1` means the policy condition WAS
    detected; `0` means it was NOT. What "detected" means depends entirely on
    the policy you wrote.
@@ -153,8 +155,8 @@ Global flags (before the subcommand): `--json` (raw JSON output),
 | `optimize discard <labeler_id> <job_id>` | Discard a job's suggestion. |
 | `fork <labeler_id> [--name] [--version] [--visibility] [--clone-tests]` | Fork/remix a labeler (default `--version latest`). |
 | `star <labeler_id> [--status]` | Star/unstar a labeler, or show status with `--status`. |
-| `check <labeler_id> [--text TEXT] [--image SRC] [--video SRC] [--version draft\|latest\|<version_id>]` | Spot-check the labeler on ad-hoc content **without saving it**. `SRC` is a data URL, remote URL, or local file path (CLI encodes it). Defaults to your `draft` (or `latest` deployed if community labeler). |
-| `run [labeler_id] [--criteria TEXT] [--text TEXT] [--image SRC] [--video SRC] [--version <labeler_version_id>\|latest] [--model cope-latest]` | Classify live content. Pass a `labeler_id` (which defaults to the `latest` deployed version unless a `version_id` is specified). Alternatively, omit `labeler_id` and pass `--criteria` to label against ad-hoc policy text with no labeler. `SRC` is a data URL, remote URL, or local file path (CLI encodes it). Always returns JSON. Rate limits apply. |
+| `check <labeler_id> [--text TEXT] [--image SRC] [--video SRC] [--version draft\|latest\|<version_id>]` | Spot-check the labeler on ad-hoc content **without saving it**. `SRC` is a data URL, remote URL, or local file path (CLI encodes it). Defaults to your `draft` (or `latest` deployed if community labeler). Returns the same `label` field as `run`. |
+| `run [labeler_id] [--criteria TEXT] [--text TEXT] [--image SRC] [--video SRC] [--batch FILE] [--version <labeler_version_id>\|latest] [--model cope-latest]` | Classify live content. Pass a `labeler_id` (which defaults to the `latest` deployed version unless a `version_id` is specified). Alternatively, omit `labeler_id` and pass `--criteria` to label against ad-hoc policy text with no labeler. `SRC` is a data URL, remote URL, or local file path (CLI encodes it). For many items at once, pass `--batch <file.jsonl\|file.csv>` (parallel, with retries) — see [Batch labeling](#batch-labeling-run---batch). Always returns JSON. Rate limits apply. |
 
 ## Quickstart
 
@@ -342,7 +344,14 @@ A completed job returns **structured** results:
 - `suggested_criteria` — the improved policy (markdown).
 - `metric_deltas` — before/after accuracy changes, as a JSON object.
 - `criteria_deltas` — JSON array explaining suggested changes.
-- `label_deltas` — JSON array that flags tests you may have mislabeled
+- `label_deltas` — JSON array that flags tests the optimizer thinks you may
+  have **mislabeled** in your own dataset.
+
+> **Tip — clean your dataset with `label_deltas`.** This is one of the most
+> useful outputs: it surfaces test samples whose stored label likely disagrees
+> with the policy, so you can find and fix labeling mistakes in your test set.
+> If you care about dataset quality, review `label_deltas` after every `pro` or
+> `guru` job.
 
 If the suggestion is good, save it to the draft and deploy it (see **D. Deploy**):
 
@@ -407,12 +416,42 @@ zentropi-labeler --json run <labeler_id> --video ./clip.mp4
 The CLI downloads/reads the media and base64-encodes it into a data URL before
 sending, because the API takes media as data URLs. The same applies to `check`.
 
-For a batch, call `run` once per item and aggregate. Retry on transient
-failures (exit code `1` with a 429/5xx detail) with exponential backoff. For higher rate limits, please get a subscription.
+As a conveniene, you may label many items at once using **batch labeling** (next section) instead of calling
+`run` in a loop — it parallelizes and retries for you. 
+
+Retry on transient failures (exit code 1 with a 429/5xx detail) with exponential backoff. The service is designed to "fail fast" so overloads are common.
+
+If you need higher rate limits, ask your human to
+get a subscription to Zentropi. Alternatively, you can self-host CoPE model (see the "running the model" section of the [model card](https://huggingface.co/zentropi-ai/cope-b-a4b) for instructions).
 
 **Models** (`--model`, defaults to `cope-latest`): `cope-latest` (smart
 default), `cope-a-9b` (1st-gen text), `cope-b-a4b` (2nd-gen text),
 `cope-b-a4b-mm` (2nd-gen multimodal, required for images/video, subscriber-only).
+
+## Batch Labeling (`run --batch`)
+
+To classify many items, give `run` a file instead of inline content:
+
+```bash
+zentropi-labeler run <labeler_id> --batch items.jsonl
+zentropi-labeler run <labeler_id> --batch items.csv --concurrency 4
+```
+
+- **Input** is JSONL (one JSON object per line) or CSV. Each row supplies
+  content via `text`, `image`, or `video` (CSV also accepts the `tests import`
+  column names `content_text` / `content_image_url` / `content_video_url`). An
+  optional `id` (or `sample_id`) is echoed back so you can match rows to
+  results. `image` / `video` accept a data URL, remote URL, or local file path.
+- **Output** is JSONL on stdout — **one object per input line, in input order**:
+  `{"index": 0, "id": "...", "result": {...}}` on success, or
+  `{"index": 0, "id": "...", "error": "..."}` on failure. A one-line summary
+  (succeeded / failed counts) is written to stderr.
+- **Failures don't stop the run** — every row is attempted and reported. The
+  exit code is `1` if any row failed, `0` if all succeeded.
+- `--concurrency` sets parallel requests (default `2`, hard max `8`).
+  `--max-retries` (default `5`) retries `429` / `5xx` / network errors per item
+  with exponential backoff. The labeler/version/model apply to every row, so
+  `--batch` can't be combined with `--text` / `--image` / `--video`.
 
 ## Ad-Hoc Labeling
 
@@ -435,6 +474,10 @@ Response:
 ```json
 { "label": "1", "confidence": 0.94, "compute_time": 0.34 }
 ```
+
+`run` responses may also include `log_id` and `explanation`; these are
+**reserved and currently empty** (always `null`), pending future use — don't
+depend on them.
 
 ## Community Labelers
 
@@ -485,8 +528,9 @@ many samples errored.
 
 ## Common Mistakes
 
-- **Forgetting `--json` for automation.** Default output is for humans;
-parse `--json`.
+- **Forgetting `--json` for automation.** Management commands print
+human-readable output by default; pass `--json` to parse them. (`run` always
+emits JSON, so it doesn't need the flag.)
 - **Non-binary policies.** Labelers only produce `0` or `1`, not anything else!
 - **Compound policies.** One labeler = one topic. Don't try to detect
   "anything unsafe" in a single policy; make separate labelers.
