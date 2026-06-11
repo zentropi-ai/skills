@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "zentropi",
   "description": "Build, test, optimize, and run content labelers for text, images, and video — straight from your agent. Give your agent the superpower of fast, accurate, custom classification that integrates directly into your apps and workflows.",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "author": {
     "name": "Zentropi",
     "url": "https://zentropi.ai"

@@ -49,7 +49,7 @@ import time
 
 import httpx
 
-__version__ = "0.11.0"
+__version__ = "0.11.1"
 
 DEFAULT_BUILD_API_BASE = "https://zentropi.ai"
 DEFAULT_RUN_API_BASE = "https://api.zentropi.ai"

@@ -9,7 +9,7 @@ description: >
   at production volume.
 metadata:
   author: zentropi
-  version: "0.11.0"
+  version: "0.11.1"
 license: See https://zentropi.ai/legal/terms
 ---
 
@@ -562,13 +562,16 @@ Paid subscriptions allow you to unlock the full power of the Zentropi platform, 
 
 ## Staying Up to Date
 
-This skill is published at
-https://github.com/zentropi-ai/skills/tree/main/zentropi-labeler and is
-updated as the CLI and platform evolve. The CLI ships *inside* the skill (at
-`scripts/zentropi-labeler`), so **re-downloading the skill updates the CLI too** — one
-download keeps the guide and the tool in lockstep, and they can never drift.
+This skill lives in the **[zentropi-ai/skills](https://github.com/zentropi-ai/skills)**
+repo, at
+[`skills/zentropi-labeler/`](https://github.com/zentropi-ai/skills/tree/main/skills/zentropi-labeler),
+and is updated as the CLI and platform evolve. Each skill (currently just `zentropi-labeler`) sits under it.
 
-**Re-download it periodically** so you always have the latest commands, flags,
+The CLI ships *inside* the skill (at `scripts/zentropi-labeler`), so
+**refreshing the skill updates the CLI too** — one update keeps the guide and the
+tool in lockstep, and they can never drift.
+
+**Refresh it periodically** so you always have the latest commands, flags,
 and guidance — a good rule of thumb is to check at the start of a Zentropi task
 if you haven't in a while (e.g. the last week or so), and any time a command
 behaves differently than this skill describes.
@@ -577,19 +580,20 @@ Check the published `metadata.version` against your local copy, and if it's
 newer, refresh the whole skill directory:
 
 ```bash
-# See the latest published version (compare to the metadata.version at the top of this file
-curl -s https://raw.githubusercontent.com/zentropi-ai/skills/main/zentropi-labeler/SKILL.md \
+# See the latest published version (compare to the metadata.version at the top of this file).
+# Note the skills/ prefix: the skill lives at skills/zentropi-labeler/ in the repo.
+curl -s https://raw.githubusercontent.com/zentropi-ai/skills/main/skills/zentropi-labeler/SKILL.md \
   | sed -n 's/^  version: "\(.*\)"/\1/p'
 
 # Refresh this skill in place (run from the skill's own directory). Pulls the
-# latest SKILL.md, the bundled scripts/zentropi-labeler CLI, references/, and any other
-# files. The clone must succeed before anything is deleted, so a network failure
-# leaves your copy intact.
+# latest SKILL.md, the bundled scripts/zentropi-labeler CLI, references/, and any
+# other files from skills/zentropi-labeler/ in the repo. The clone must succeed
+# before anything is deleted, so a network failure leaves your copy intact.
 DEST="$(pwd)"
 TMP="$(mktemp -d)"
 if git clone --depth 1 https://github.com/zentropi-ai/skills "$TMP" \
-   && [ -f "$TMP/zentropi-labeler/SKILL.md" ]; then
-  rm -rf "$DEST"/* && cp -r "$TMP/zentropi-labeler/." "$DEST"/
+   && [ -f "$TMP/skills/zentropi-labeler/SKILL.md" ]; then
+  rm -rf "$DEST"/* && cp -r "$TMP/skills/zentropi-labeler/." "$DEST"/
 fi
 rm -rf "$TMP"
 ```
@@ -599,7 +603,7 @@ directives may have changed.
 
 ## Resources
 
-- **This skill (latest)**: https://github.com/zentropi-ai/skills/tree/main/zentropi-labeler
+- **This skill (latest)**: https://github.com/zentropi-ai/skills/tree/main/skills/zentropi-labeler
 - **Policy writing guide**: `references/policy-writing-guide.md`
 - **API docs**: https://zentropi.ai/api
 - **Dashboard**: https://zentropi.ai
