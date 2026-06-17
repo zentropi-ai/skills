@@ -1,3 +1,9 @@
+**TL;DR: Copy/paste this into your AI agent...**
+
+```text
+Install the zentropi skills at https://github.com/zentropi-ai/skills
+```
+
 # Zentropi Skills
 
 Agent skills for building systems powered by the
