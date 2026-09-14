@@ -9,7 +9,7 @@ description: >
   at production volume.
 metadata:
   author: zentropi
-  version: "0.11.1"
+  version: "0.11.7"
 license: See https://zentropi.ai/legal/terms
 ---
 
@@ -149,8 +149,9 @@ Global flags (before the subcommand): `--json` (raw JSON output),
 | `tests import <labeler_id> --csv data.csv [--dry-run]` | Bulk-import test samples from a CSV (mirrors the web upload). Media columns accept http(s) URLs or local file paths. See [CSV import](#csv-import-tests-import). |
 | `tests delete <labeler_id> <test_id>` | Delete one test sample. |
 | `tests delete-all <labeler_id>` | Delete all test samples. |
+| `generate <labeler_id> [--version draft\|latest\|<version_id>]` | Expand or standardize the labeler's draft policy. Short briefs are expanded with the creator prompt; detailed policies are reformatted with the editor prompt. |
 | `benchmark <labeler_id> [--version draft\|latest\|<version_id>]` | Run the labeler over its stored test set; streams per-sample results then a summary. Defaults to your `draft`. |
-| `optimize start <labeler_id> [--tier basic\|pro\|guru] [--version draft\|latest\|<version_id>]` | Start an AI-powered optimization job (default `--tier pro`, `--version draft`). Requires a subscription. See [Optimizer tiers](#optimizer-tiers). |
+| `optimize start <labeler_id> --goal criteria\|labels\|auto [--version draft\|latest\|<version_id>]` | Start an AI-powered optimization job (`--version draft` by default). Requires a subscription. See [Optimization goals](#optimization-goals). |
 | `optimize status <labeler_id> [job_id]` | Poll a job (defaults to `latest`). |
 | `optimize discard <labeler_id> <job_id>` | Discard a job's suggestion. |
 | `fork <labeler_id> [--name] [--version] [--visibility] [--clone-tests]` | Fork/remix a labeler (default `--version latest`). |
@@ -211,7 +212,7 @@ zentropi-labeler update <labeler_id> --criteria "<your revised policy text>"
 ```
 
 See the policy guide for how to write effective criteria. Next, test the draft
-(section B), then deploy it (section D).
+(section B), then deploy it (section E).
 
 ### B. Test your labeler
 
@@ -309,51 +310,84 @@ get an array of events; the final summary event looks like:
 - Metrics are computed on binary labels only (`0`/`1`).
 
 Low F1 usually means the policy is vague — refine the criteria (see the policy
-guide) and re-benchmark, or run optimization (section C).
+guide) and re-benchmark, or run optimization (section D).
 
-### C. Optimize your labeler
+### C. Generate (expand / standardize) your policy
+
+Before running the optimizer you can ask the server to expand a short brief into
+a full CoPE policy or reformat an existing non-CoPE policy. This calls
+`POST /v1/labelers/{id}/generate`:
+
+```bash
+zentropi-labeler --json generate <labeler_id>
+# -> returns a job_id; poll it with optimize status
+zentropi-labeler --json optimize status <labeler_id> <job_id>
+```
+
+- **Short brief (≤ 64 words):** expanded into a full CoPE policy with the
+  *creator* prompt.
+- **Detailed policy:** reformatted with the *editor* prompt.
+
+`generate` accepts non-standard policies too, so you can standardize legacy
+criteria before optimizing. A successful run updates the draft and
+creates/deploys the initial version.
+
+### D. Optimize your labeler
 
 > Running optimizers through the API/CLI requires an active **subscription**.
 > Keys without one get a `402` response.
 
 ```bash
-# 1. Start a job against the current draft (default --tier pro).
-zentropi-labeler --json optimize start <labeler_id> --version draft
+# 1. Start a job against the current draft.
+zentropi-labeler --json optimize start <labeler_id> --goal auto --version draft
 # -> returns a job_id; status is "pending"
 
 # 2. Poll until status is "completed" (or "failed"). Once a minute is sufficient.
 zentropi-labeler --json optimize status <labeler_id> <job_id>
 ```
 
-**Optimizer tiers** (`--tier`, default `pro`) set how much effort the optimizer
-spends. These match the tiers in the web UI. The times are approximate, not a
-wall-clock guarantee — runs often finish sooner.
+**Optimization goals** (`--goal`, required) tell the optimizer what to
+improve:
 
-| Tier | What it does | Roughly |
-| --- | --- | --- |
-| `basic` | Reformat your labeling criteria. | ~2 min |
-| `pro` | Tune to fit your tests. | ~10 min |
-| `guru` | Deeply tune with analysis. | ~30 min |
+| Goal | What it does |
+| --- | --- |
+| `criteria` | Improve the policy text to fit your stored labels (policy-only search). Automatically standardizes a detailed non-CoPE policy before search. |
+| `labels` | Review your stored labels against the current policy and suggest corrections. The policy is not changed. |
+| `auto` | Improve both policy and labels together as one coherent package. |
 
-Note: `metric_deltas`, `label_deltas`, and per-sample review only populate at
-`pro` or `guru` (they need the deeper analysis). `basic` returns improved
-criteria without them.
+`suggested_labels` and `label_deltas` are returned by `labels` and `auto` goals
+only; `criteria` optimizes the policy without changing your stored labels and
+never suggests label corrections.
 
-A completed job returns **structured** results:
+A completed job returns **structured** results. Suggestions are pre-gated
+server-side against the public benchmark: `criteria` compares both policies on
+your stored labels; `auto` compares the current policy-and-label package with
+the revised policy and suggested label corrections. A run that fails the gate
+returns your original criteria unchanged;
+the top-level `verdict` field says which case you got — `improved`,
+`reformat_only` (formatting rewrite, no quality claim — ignore metrics), or
+`no_change` (original criteria returned, metric deltas null).
 
 - `suggested_criteria` — the improved policy (markdown).
 - `metric_deltas` — before/after accuracy changes, as a JSON object.
+  `benchmark` always has the same `n`, `total`, `before`, and `after` shape.
+  `criteria` and `auto` compare both policies on stored labels. `auto` also
+  adds `benchmark.attribution.labels` and `benchmark.attribution.policy`; those
+  deltas sum to the package delta.
 - `criteria_deltas` — JSON array explaining suggested changes.
-- `label_deltas` — JSON array that flags tests the optimizer thinks you may
-  have **mislabeled** in your own dataset.
+- `suggested_labels` — (`labels`/`auto` only) JSON array of tests the optimizer
+  thinks you may have **mislabeled** in your own dataset (stored label, suggested
+  label, evidence, reasoning).
+- `label_deltas` — (`labels`/`auto` only) JSON array of short human-readable
+  themes summarizing the label corrections in `suggested_labels`.
 
-> **Tip — clean your dataset with `label_deltas`.** This is one of the most
+> **Tip — clean your dataset with `suggested_labels`.** This is one of the most
 > useful outputs: it surfaces test samples whose stored label likely disagrees
 > with the policy, so you can find and fix labeling mistakes in your test set.
-> If you care about dataset quality, review `label_deltas` after every `pro` or
-> `guru` job.
+> If you care about dataset quality, review `suggested_labels` after every
+> `labels` or `auto` job.
 
-If the suggestion is good, save it to the draft and deploy it (see **D. Deploy**):
+If the suggestion is good, save it to the draft and deploy it (see **E. Deploy**):
 
 ```bash
 zentropi-labeler update <labeler_id> --criteria "<paste suggested_criteria>"
@@ -362,7 +396,7 @@ zentropi-labeler deploy <labeler_id>
 
 Otherwise discard it: `zentropi-labeler optimize discard <labeler_id> <job_id>`.
 
-### D. Deploy your labeler
+### E. Deploy your labeler
 
 A new labeler — and any edits you make to it — lives as a **draft** until you
 deploy. `check` and `benchmark` can run a draft, but `run` only runs the
@@ -381,7 +415,7 @@ zentropi-labeler --json versions list <labeler_id>
 
 To go live with a specific existing version instead of the draft — for example
 to roll back, or to promote a version you made with `versions create` (or the
-`suggested_criteria` from an optimize job, section C) — pass `--version`:
+`suggested_criteria` from an optimize job, section D) — pass `--version`:
 
 ```bash
 # Promote / roll back to an existing version.
@@ -396,7 +430,7 @@ undeploying, `run` errors until you deploy again:
 zentropi-labeler undeploy <labeler_id>
 ```
 
-### E. Run your labeler in production
+### F. Run your labeler in production
 
 Once a version is deployed, classify live content. Use `run` (not
 `check` / `benchmark`) for anything beyond one-off tests. This function always returns JSON since it is intended for automated pipelines.

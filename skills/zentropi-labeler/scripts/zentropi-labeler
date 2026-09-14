@@ -49,7 +49,7 @@ import time
 
 import httpx
 
-__version__ = "0.11.1"
+__version__ = "0.11.7"
 
 DEFAULT_BUILD_API_BASE = "https://zentropi.ai"
 DEFAULT_RUN_API_BASE = "https://api.zentropi.ai"
@@ -729,22 +729,42 @@ def _summarize_result(obj):
     return json.dumps(obj)
 
 
-# Optimizer effort tiers, matching the names and behavior shown in the web UI.
-# The value is the optimizer's effort budget in seconds (max_time_seconds), an
-# approximate runtime, not a wall-clock guarantee:
-#   basic (120s, ~2 min):  reformat your labeling criteria.
-#   pro   (600s, ~10 min): tune to fit your tests.
-#   guru  (1800s, ~30 min): deeply tune with analysis.
-OPTIMIZER_TIERS = {"basic": 120, "pro": 600, "guru": 1800}
+def cmd_generate(args):
+    """Call POST /v1/labelers/{id}/generate to expand or standardize the draft policy.
+
+    Replaces the legacy max_time_seconds:0 pattern used by older clients. The
+    server applies the editor prompt for detailed (>64-word) policies and the
+    creator prompt for short briefs.
+    """
+    key = require_key(args)
+    body = {}
+    if args.version is not None:
+        body["version_id"] = args.version
+    resp = request("POST", f"/v1/labelers/{args.labeler_id}/generate", key, json_body=body)
+    data = parse_or_die(resp)
+    if data is _NON_JSON:
+        print(resp.text)
+        return
+    emit(data, args.json)
 
 
 def cmd_optimize_start(args):
     key = require_key(args)
-    body = {"max_time_seconds": OPTIMIZER_TIERS[args.tier], "version_id": args.version}
-    handle_response(
-        request("POST", f"/v1/labelers/{args.labeler_id}/optimize", key, json_body=body),
-        args.json,
-    )
+    body = {"goal": args.goal, "version_id": args.version}
+    resp = request("POST", f"/v1/labelers/{args.labeler_id}/optimize", key, json_body=body)
+    data = parse_or_die(resp)
+    if data is _NON_JSON:
+        print(resp.text)
+        return
+    if isinstance(data, dict):
+        for warning in data.get("warnings") or []:
+            message = (
+                warning.get("message")
+                if isinstance(warning, dict)
+                else str(warning)
+            )
+            print(f"warning: {message}", file=sys.stderr)
+    emit(data, args.json)
 
 
 def cmd_optimize_status(args):
@@ -1196,14 +1216,14 @@ def build_parser():
     s = osub.add_parser("start", help="Start an optimization job.")
     s.add_argument("labeler_id")
     s.add_argument(
-        "--tier",
-        choices=["basic", "pro", "guru"],
-        default="pro",
+        "--goal",
+        choices=["criteria", "labels", "auto"],
+        required=True,
         help=(
-            "Optimizer effort (default: pro). "
-            "basic = reformat your labeling criteria (~2 min); "
-            "pro = tune to fit your tests (~10 min); "
-            "guru = deeply tune with analysis (~30 min). Requires a subscription."
+            "Optimization goal. "
+            "criteria = improve policy text to fit your stored labels; "
+            "labels = review stored labels against the current policy; "
+            "auto = improve both policy and labels together. Requires a subscription."
         ),
     )
     s.add_argument("--version", default="draft", help="Version id, 'draft', or 'latest'.")
@@ -1218,6 +1238,23 @@ def build_parser():
     s.add_argument("labeler_id")
     s.add_argument("job_id")
     s.set_defaults(func=cmd_optimize_discard)
+
+    # generate
+    sp = sub.add_parser(
+        "generate",
+        help=(
+            "Expand or standardize a labeler's draft policy via the server. "
+            "Short briefs are expanded; detailed policies are reformatted. "
+            "Replaces the legacy max_time_seconds:0 pattern."
+        ),
+    )
+    sp.add_argument("labeler_id")
+    sp.add_argument(
+        "--version",
+        default=None,
+        help="Version id, 'draft', or 'latest'. Defaults to the current draft.",
+    )
+    sp.set_defaults(func=cmd_generate)
 
     # fork
     sp = sub.add_parser("fork", help="Fork/remix a labeler.")
