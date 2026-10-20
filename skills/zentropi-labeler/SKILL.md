@@ -9,7 +9,7 @@ description: >
   at production volume.
 metadata:
   author: zentropi
-  version: "0.11.7"
+  version: "0.12.0"
 license: See https://zentropi.ai/legal/terms
 ---
 
@@ -33,7 +33,7 @@ The CLI is a single unified interface over the whole Zentropi platform, inclusiv
 
 Do NOT use for:
 - Use cases that need more than a binary (1/0) label
-- Creating classifiers that emit multiple labels
+- Non-binary output from a single policy. Use `run-multi` to evaluate multiple binary policies together.
 
 ## The mental model: one tool, two intents
 
@@ -43,7 +43,7 @@ The commands split by **what you're doing**:
   `tests`, `check`, `benchmark`, `optimize`, `deploy`/`undeploy`, `fork`, `star`.
   These are for creating and refining a labeler. They are meant **for development**,
   not high throughput.
-- **Running Labelers** — `run`. This is for classifying live content, including at
+- **Running Labelers** — `run` and `run-multi`. These classify live content, including at
   production volume. Once you are satisfied with a labeler, **deploy a version** and use `run` for real traffic.
 
 The typical lifecycle:
@@ -158,6 +158,57 @@ Global flags (before the subcommand): `--json` (raw JSON output),
 | `star <labeler_id> [--status]` | Star/unstar a labeler, or show status with `--status`. |
 | `check <labeler_id> [--text TEXT] [--image SRC] [--video SRC] [--version draft\|latest\|<version_id>]` | Spot-check the labeler on ad-hoc content **without saving it**. `SRC` is a data URL, remote URL, or local file path (CLI encodes it). Defaults to your `draft` (or `latest` deployed if community labeler). Returns the same `label` field as `run`. |
 | `run [labeler_id] [--criteria TEXT] [--text TEXT] [--image SRC] [--video SRC] [--batch FILE] [--version <labeler_version_id>\|latest] [--model cope-latest]` | Classify live content. Pass a `labeler_id` (which defaults to the `latest` deployed version unless a `version_id` is specified). Alternatively, omit `labeler_id` and pass `--criteria` to label against ad-hoc policy text with no labeler. `SRC` is a data URL, remote URL, or local file path (CLI encodes it). For many items at once, pass `--batch <file.jsonl\|file.csv>` (parallel, with retries) — see [Batch labeling](#batch-labeling-run---batch). Always returns JSON. Rate limits apply. |
+
+| `run-multi --text TEXT --model MODEL --labelers JSON_OR_DASH` | Evaluate 1–26 binary labelers against one text. Pass a JSON array inline or `-` for stdin. Always returns a JSON array. |
+
+### Multi-label inference (`run-multi`)
+
+Use `run-multi` to apply **1–26 binary labelers to one text** in a single
+`POST /v1/multilabel` request on the inference API. This is different from
+`run --batch`, which applies one labeler to many inputs.
+
+Pass the API's `labelers` array directly as JSON—no file required:
+
+```bash
+zentropi-labeler run-multi \
+  --text "The vase arrived cracked. Please refund my payment." \
+  --model cope-b-s1 \
+  --labelers '[
+    {"key": "refund", "criteria_text": "The customer requests a refund."},
+    {"key": "damage", "criteria_text": "The customer reports a damaged product."}
+  ]'
+```
+
+For long policies or text containing apostrophes, read the same array from stdin
+with `--labelers -` and a quoted heredoc:
+
+```bash
+zentropi-labeler run-multi --text "The vase arrived cracked." --model cope-b-s1 --labelers - <<'JSON'
+[
+  {"key": "damage", "criteria_text": "The customer's product arrived damaged."},
+  {"key": "refund", "labeler_id": "your-deployed-labeler-id"}
+]
+JSON
+```
+
+- Each entry supplies `criteria_text` **or** a saved `labeler_id` and/or
+  `labeler_version_id`. Inline criteria cannot be combined with saved references.
+  Mixed inline and saved entries are allowed. Saved references must resolve to
+  deployed versions the caller can access; version selection belongs inside each
+  entry, not in a global `--version` flag.
+- Optional `key` values must be nonblank and unique. They are echoed in results;
+  if omitted, `key` is omitted from the corresponding result too.
+- `--text` must be nonblank. Images, video, positional labeler IDs, `--criteria`,
+  global `--version`, and `--batch` are not supported by this command.
+- Explicit `--model` is required; currently use `cope-b-s1`. Do not default to
+  `cope-latest`, which does not support multi-label evaluation.
+- Output is **always a JSON array**, even for one labeler, in request order.
+  Each result includes `label`, `confidence`, and `compute_time`, plus `key`
+  when supplied. The shared `compute_time` includes inference, network, and API
+  overhead; do not sum it across results.
+- Invalid or inaccessible entries fail the whole request. HTTP/network errors
+  exit nonzero with a message on stderr. Like single-shot `run`, this command
+  does not automatically retry.
 
 ## Quickstart
 

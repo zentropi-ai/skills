@@ -28,7 +28,8 @@ check against ad-hoc content you supply) are both build/test operations, so they
 use the /v1 API. `run` executes a labeler against content you supply as a *run*
 operation, so it uses the inference API.
 
-For high-volume labeling on live traffic, always use `run` to access the inference API.
+`run-multi` evaluates multiple binary labelers against one text using /v1/multilabel.
+For high-volume labeling on live traffic, use `run` or `run-multi` to access the inference API.
 By contrast, the `benchmark` and `check` functions are just for testing labelers during development.
 
 The /v1 host 301-redirects app./www. hosts to the naked domain, so requests
@@ -49,7 +50,7 @@ import time
 
 import httpx
 
-__version__ = "0.11.7"
+__version__ = "0.12.0"
 
 DEFAULT_BUILD_API_BASE = "https://zentropi.ai"
 DEFAULT_RUN_API_BASE = "https://api.zentropi.ai"
@@ -1009,6 +1010,40 @@ def _run_batch(args, key, base_body):
         sys.exit(1)
 
 
+def cmd_run_multi(args):
+    """Evaluate several binary labelers against one text in one inference call."""
+    if not args.text.strip():
+        die("--text must not be blank.", code=2)
+    if not args.model.strip():
+        die("--model must not be blank.", code=2)
+    try:
+        raw = sys.stdin.read() if args.labelers == "-" else args.labelers
+        labelers = json.loads(raw)
+    except (ValueError, OSError) as e:
+        die(f"--labelers must be a JSON array (or '-' for stdin): {e}", code=2)
+    if not isinstance(labelers, list) or not 1 <= len(labelers) <= 26:
+        die("--labelers must contain 1–26 objects.", code=2)
+    if not all(isinstance(item, dict) for item in labelers):
+        die("each --labelers entry must be an object.", code=2)
+
+    # The API owns per-entry policy, permission, key, and model validation.
+    key = require_key(args)
+    body = {"content_text": args.text, "model": args.model, "labelers": labelers}
+    try:
+        with client() as c:
+            resp = c.post(
+                f"{run_api_base()}/v1/multilabel",
+                headers=auth_headers(key),
+                json=body,
+            )
+    except httpx.RequestError as e:
+        die(f"network error: {e}")
+    data = parse_or_die(resp)
+    if not isinstance(data, list):
+        die("invalid multi-label response: expected a JSON array.")
+    emit(data, True)
+
+
 def cmd_label(args):
     """Single-shot or batch labeling via the inference API (api.zentropi.ai)."""
     key = require_key(args)
@@ -1281,6 +1316,19 @@ def build_parser():
     sp.add_argument("--video-url", dest="video", help=argparse.SUPPRESS)
     sp.add_argument("--version", help="Version id, 'draft', or 'latest'. Defaults to your draft (or latest deployed).")
     sp.set_defaults(func=cmd_check)
+
+    sp = sub.add_parser(
+        "run-multi",
+        help="Evaluate multiple binary labelers against one text (not batch labeling).",
+    )
+    sp.add_argument("--text", required=True, help="Shared text to classify.")
+    sp.add_argument("--model", required=True, help="Explicit multi-label model, e.g. cope-b-s1.")
+    sp.add_argument(
+        "--labelers", required=True,
+        help="JSON array of 1–26 labeler objects, or '-' to read it from stdin. "
+        "Each entry supplies criteria_text or a saved labeler reference, and an optional key.",
+    )
+    sp.set_defaults(func=cmd_run_multi)
 
     # run (single-shot inference)
     sp = sub.add_parser("run", help="Run a labeler on live content you supply (uses the inference API at api.zentropi.ai — use this for production volume).")
