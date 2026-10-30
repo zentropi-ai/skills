@@ -9,7 +9,7 @@ description: >
   at production volume.
 metadata:
   author: zentropi
-  version: "0.12.0"
+  version: "0.13.1"
 license: See https://zentropi.ai/legal/terms
 ---
 
@@ -151,7 +151,7 @@ Global flags (before the subcommand): `--json` (raw JSON output),
 | `tests delete-all <labeler_id>` | Delete all test samples. |
 | `generate <labeler_id> [--version draft\|latest\|<version_id>]` | Expand or standardize the labeler's draft policy. Short briefs are expanded with the creator prompt; detailed policies are reformatted with the editor prompt. |
 | `benchmark <labeler_id> [--version draft\|latest\|<version_id>]` | Run the labeler over its stored test set; streams per-sample results then a summary. Defaults to your `draft`. |
-| `optimize start <labeler_id> --goal criteria\|labels\|auto [--version draft\|latest\|<version_id>]` | Start an AI-powered optimization job (`--version draft` by default). Requires a subscription. See [Optimization goals](#optimization-goals). |
+| `optimize start <labeler_id> --goal criteria\|labels\|auto [--version draft\|latest\|<version_id>] [--model <model>]` | Start an AI-powered optimization job (`--version draft` by default). Requires a subscription. See [Optimization goals](#optimization-goals). |
 | `optimize status <labeler_id> [job_id]` | Poll a job (defaults to `latest`). |
 | `optimize discard <labeler_id> <job_id>` | Discard a job's suggestion. |
 | `fork <labeler_id> [--name] [--version] [--visibility] [--clone-tests]` | Fork/remix a labeler (default `--version latest`). |
@@ -396,6 +396,19 @@ zentropi-labeler --json optimize start <labeler_id> --goal auto --version draft
 # 2. Poll until status is "completed" (or "failed"). Once a minute is sufficient.
 zentropi-labeler --json optimize status <labeler_id> <job_id>
 ```
+
+Optionally pass `--model <model>` (maximum 80 characters after trimming surrounding whitespace) to override the CoPE scoring model for this
+run, for example:
+
+```bash
+zentropi-labeler --json optimize start <labeler_id> --goal criteria --model cope-b-s1
+```
+
+Model selection priority is: **`--model` override → saved account model
+preference (text or visual, based on the samples) → system default**.
+`cope-latest` resolves to the system default for the sample type; the usual
+image/video capability fallback still applies. This does not change your account
+preferences or the internal LLMs used to generate policy revisions.
 
 **Optimization goals** (`--goal`, required) tell the optimizer what to
 improve:

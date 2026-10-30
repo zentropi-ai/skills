@@ -50,7 +50,7 @@ import time
 
 import httpx
 
-__version__ = "0.12.0"
+__version__ = "0.13.1"
 
 DEFAULT_BUILD_API_BASE = "https://zentropi.ai"
 DEFAULT_RUN_API_BASE = "https://api.zentropi.ai"
@@ -752,6 +752,13 @@ def cmd_generate(args):
 def cmd_optimize_start(args):
     key = require_key(args)
     body = {"goal": args.goal, "version_id": args.version}
+    if args.model is not None:
+        model = args.model.strip()
+        if not model:
+            die("--model must not be blank.", code=2)
+        if len(model) > 80:
+            die("--model must be at most 80 characters.", code=2)
+        body["model"] = model
     resp = request("POST", f"/v1/labelers/{args.labeler_id}/optimize", key, json_body=body)
     data = parse_or_die(resp)
     if data is _NON_JSON:
@@ -1262,6 +1269,7 @@ def build_parser():
         ),
     )
     s.add_argument("--version", default="draft", help="Version id, 'draft', or 'latest'.")
+    s.add_argument("--model", help="CoPE scoring model override; otherwise use the account preference, then the system default.")
     s.set_defaults(func=cmd_optimize_start)
 
     s = osub.add_parser("status", help="Get optimization job status.")
