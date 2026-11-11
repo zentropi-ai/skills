@@ -50,7 +50,7 @@ import time
 
 import httpx
 
-__version__ = "0.13.1"
+__version__ = "0.13.2"
 
 DEFAULT_BUILD_API_BASE = "https://zentropi.ai"
 DEFAULT_RUN_API_BASE = "https://api.zentropi.ai"
@@ -783,6 +783,14 @@ def cmd_optimize_status(args):
     )
 
 
+def cmd_optimize_cancel(args):
+    key = require_key(args)
+    handle_response(
+        request("POST", f"/v1/labelers/{args.labeler_id}/optimize/{args.job_id}/cancel", key),
+        args.json,
+    )
+
+
 def cmd_optimize_discard(args):
     key = require_key(args)
     handle_response(
@@ -1277,7 +1285,12 @@ def build_parser():
     s.add_argument("job_id", nargs="?", default="latest")
     s.set_defaults(func=cmd_optimize_status)
 
-    s = osub.add_parser("discard", help="Discard an optimization job.")
+    s = osub.add_parser("cancel", help="Stop a pending or running optimization job.")
+    s.add_argument("labeler_id")
+    s.add_argument("job_id")
+    s.set_defaults(func=cmd_optimize_cancel)
+
+    s = osub.add_parser("discard", help="Dismiss suggestions without stopping the job or changing its status.")
     s.add_argument("labeler_id")
     s.add_argument("job_id")
     s.set_defaults(func=cmd_optimize_discard)

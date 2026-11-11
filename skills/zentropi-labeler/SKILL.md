@@ -9,7 +9,7 @@ description: >
   at production volume.
 metadata:
   author: zentropi
-  version: "0.13.1"
+  version: "0.13.2"
 license: See https://zentropi.ai/legal/terms
 ---
 
@@ -153,7 +153,8 @@ Global flags (before the subcommand): `--json` (raw JSON output),
 | `benchmark <labeler_id> [--version draft\|latest\|<version_id>]` | Run the labeler over its stored test set; streams per-sample results then a summary. Defaults to your `draft`. |
 | `optimize start <labeler_id> --goal criteria\|labels\|auto [--version draft\|latest\|<version_id>] [--model <model>]` | Start an AI-powered optimization job (`--version draft` by default). Requires a subscription. See [Optimization goals](#optimization-goals). |
 | `optimize status <labeler_id> [job_id]` | Poll a job (defaults to `latest`). |
-| `optimize discard <labeler_id> <job_id>` | Discard a job's suggestion. |
+| `optimize cancel <labeler_id> <job_id>` | Stop a pending or running job. Marks it failed with "Cancelled by user" and discards its suggestions. |
+| `optimize discard <labeler_id> <job_id>` | Dismiss a job's suggestions without stopping execution or changing its status. |
 | `fork <labeler_id> [--name] [--version] [--visibility] [--clone-tests]` | Fork/remix a labeler (default `--version latest`). |
 | `star <labeler_id> [--status]` | Star/unstar a labeler, or show status with `--status`. |
 | `check <labeler_id> [--text TEXT] [--image SRC] [--video SRC] [--version draft\|latest\|<version_id>]` | Spot-check the labeler on ad-hoc content **without saving it**. `SRC` is a data URL, remote URL, or local file path (CLI encodes it). Defaults to your `draft` (or `latest` deployed if community labeler). Returns the same `label` field as `run`. |
